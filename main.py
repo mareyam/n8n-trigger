@@ -13,13 +13,25 @@ import openai
 from fastapi import FastAPI, HTTPException
 from fastapi import FastAPI
 from pydantic import BaseModel
+import asyncio
+
 app = FastAPI()
 
 load_dotenv()
 
 api_key = os.getenv("OPENAI_API_KEY")
+google_project_id = os.getenv("GOOGLE_PROJECT_ID")
+google_private_key_id = os.getenv("GOOGLE_PRIVATE_KEY_ID")
+google_private_key = os.getenv("GOOGLE_PRIVATE_KEY")
+google_client_email = os.getenv("GOOGLE_CLIENT_EMAIL")
+google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+google_auth_uri = os.getenv("GOOGLE_AUTH_URI")
+google_token_uri = os.getenv("GOOGLE_TOKEN_URI")
+google_cert_url = os.getenv("GOOGLE_CERT_URL")
+google_x509_cert_url = os.getenv("GOOGLE_X509_CERT_URL")
+DOCUMENT_ID = os.getenv("DOCUMENT_ID")
+
 SCOPES = ["https://www.googleapis.com/auth/documents"]
-DOCUMENT_ID = "1C6SjUus8_kx2ZF8NajY0KKcukknRTryb2NkPG7HoBM8"  #present in json 
 SERVICE_ACCOUNT_FILE = "google-credentials.json"
 
 credentials = service_account.Credentials.from_service_account_file(
@@ -31,18 +43,33 @@ docs_service = build("docs", "v1", credentials=credentials)
 def read_root():
     return {"message": "Hello World"}
 
+@app.get("/hi")
+def hi():
+    return {"message": "Hello World"}
+
+@app.post("/fun1")
+async def fun1():
+    try:
+        title = await generate_amazon_title()
+        return title
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error triggering functions: {e}")
+
 @app.post("/trigger")
 async def trigger_functions():
     try:
         # Call the functions here
+        print("Generating Google Sheet:")
+
         match_and_create_google_sheet(credentials_file, amazon_sheet_url, scrap_sheet_url, output_sheet_url, product_url)
-        generate_amazon_backend_keywords()
-        generate_amazon_bullets()
-        generate_amazon_description()
-        generate_amazon_title()
-        print("hello")
-        
-        return {"message": "Functions triggered successfully."}
+       
+        print("Generating Google Docs:")
+        keywords = await generate_amazon_backend_keywords()
+        bullets = await generate_amazon_bullets()
+        desc = await generate_amazon_description()
+        title = await generate_amazon_title()
+        print("Results Generated")
+        return {"keywords": keywords, "bullets": bullets,"desc": desc, "title": title}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error triggering functions: {e}")
 
@@ -171,58 +198,70 @@ def match_and_create_google_sheet(credentials_file, amazon_sheet_url, scrap_shee
         print("No matching fields found.")
 
 
-def generate_amazon_title():
-    response = client.chat.completions.create(
-        model="gpt-4-turbo",
-        messages=[
-            {"role": "system", "content": "You are an expert in writing Amazon product titles."},
-            {"role": "user", "content": title_prompt}
-        ]
-    )
-    title = response.choices[0].message.content.strip()
-    print("Generated Amazon Product Title")
-    append_to_google_doc(DOCUMENT_ID, f"Amazon Product Title:\n{title}")
-    return title
+async def generate_amazon_title():
+    try:
+        response = await asyncio.to_thread(client.chat.completions.create,
+            model="gpt-4-turbo",
+            messages=[
+                {"role": "system", "content": "You are an expert in writing Amazon product titles."},
+                {"role": "user", "content": title_prompt}
+            ]
+        )
+        title = response.choices[0].message.content.strip()
+        print("Generated Amazon Product Title")
+        append_to_google_doc(DOCUMENT_ID, f"Amazon Product Title:\n{title}")
+        return title
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating title: {str(e)}")
 
-def generate_amazon_bullets():
-    response = client.chat.completions.create(
-        model="gpt-4-turbo",
-        messages=[
-            {"role": "system", "content": "You are an expert in writing Amazon product bullet points."},
-            {"role": "user", "content": bullets_prompt}
-        ]
-    )
-    bullets = response.choices[0].message.content.strip()
-    print("Generated Amazon Bullet Points")
-    append_to_google_doc(DOCUMENT_ID, f"Amazon Bullet Points:\n{bullets}")
-    return bullets
+async def generate_amazon_bullets():
+    try:
+        response = await asyncio.to_thread(client.chat.completions.create,
+            model="gpt-4-turbo",
+            messages=[
+                {"role": "system", "content": "You are an expert in writing Amazon product bullet points."},
+                {"role": "user", "content": bullets_prompt}
+            ]
+        )
+        bullets = response.choices[0].message.content.strip()
+        print("Generated Amazon Bullet Points")
+        append_to_google_doc(DOCUMENT_ID, f"Amazon Bullet Points:\n{bullets}")
+        return bullets
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating title: {str(e)}")
 
-def generate_amazon_backend_keywords():
-    if not product_url:
-        return "Failed to generate backend keywords: No product data found"
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": keywords_prompt}]
-    )
-    
-    backend_keywords = response.choices[0].message.content.strip()
-    print("Generated Amazon Product Keywords")
-    append_to_google_doc(DOCUMENT_ID, f"Amazon Product Keywords:\n{backend_keywords}")
-    return backend_keywords
+async def generate_amazon_backend_keywords():
+    try:
+        if not product_url:
+            return "Failed to generate backend keywords: No product data found"
+        response = await asyncio.to_thread(client.chat.completions.create,
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": keywords_prompt}]
+        )
+        
+        backend_keywords = response.choices[0].message.content.strip()
+        print("Generated Amazon Product Keywords")
+        append_to_google_doc(DOCUMENT_ID, f"Amazon Product Keywords:\n{backend_keywords}")
+        return backend_keywords
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating title: {str(e)}")
 
-def generate_amazon_description():
-    """Generates an SEO-optimized Amazon product description."""
-    if not product_url:
-        return "Failed to generate product description: No product data found"
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": description_prompt}]
-    )
-    
-    optimized_description = response.choices[0].message.content.strip()
-    print("Generated Amazon Product Description")
-    append_to_google_doc(DOCUMENT_ID, f"Amazon Product Description:\n{optimized_description}")
-    return optimized_description
+async def generate_amazon_description():
+    try:
+        """Generates an SEO-optimized Amazon product description."""
+        if not product_url:
+            return "Failed to generate product description: No product data found"
+        response = await asyncio.to_thread(client.chat.completions.create,
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": description_prompt}]
+        )
+        
+        optimized_description = response.choices[0].message.content.strip()
+        print("Generated Amazon Product Description")
+        append_to_google_doc(DOCUMENT_ID, f"Amazon Product Description:\n{optimized_description}")
+        return optimized_description
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating title: {str(e)}")
 
 credentials_file = "google-credentials.json"
 amazon_sheet_url = "https://docs.google.com/spreadsheets/d/1A3SW1gqTQrB0Z5jGm0PcNQJnw2IcGFHuZd1aRPLt8ZQ/edit"
@@ -308,7 +347,7 @@ keywords_prompt = f"""
     - No redundant or overlapping keywords.
     - Utilize synonyms, regional spellings, and alternative terms.
     - Prioritize broad discoverability & conversion potential.
-    - Ensure the final output is exactly **500 characters** long.
+    - Ensure the final output is exactly **100 characters** long.
     
     **Product Information:**
     {product_url}
