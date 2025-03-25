@@ -69,7 +69,7 @@ async def trigger_functions():
         desc = await generate_amazon_description()
         title = await generate_amazon_title()
         print("Results Generated")
-        return {"keywords": keywords, "bullets": bullets,"desc": desc, "title": title}
+        # return {"keywords": keywords, "bullets": bullets,"desc": desc, "title": title}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error triggering functions: {e}")
 
