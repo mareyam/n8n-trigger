@@ -51,7 +51,7 @@ def hi():
 async def fun1():
     try:
         title = await generate_amazon_title()
-        return title
+        # return title
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error triggering functions: {e}")
 
@@ -210,7 +210,7 @@ async def generate_amazon_title():
         title = response.choices[0].message.content.strip()
         print("Generated Amazon Product Title")
         append_to_google_doc(DOCUMENT_ID, f"Amazon Product Title:\n{title}")
-        return title
+        # return title
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating title: {str(e)}")
 
@@ -226,7 +226,7 @@ async def generate_amazon_bullets():
         bullets = response.choices[0].message.content.strip()
         print("Generated Amazon Bullet Points")
         append_to_google_doc(DOCUMENT_ID, f"Amazon Bullet Points:\n{bullets}")
-        return bullets
+        # return bullets
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating title: {str(e)}")
 
@@ -242,7 +242,7 @@ async def generate_amazon_backend_keywords():
         backend_keywords = response.choices[0].message.content.strip()
         print("Generated Amazon Product Keywords")
         append_to_google_doc(DOCUMENT_ID, f"Amazon Product Keywords:\n{backend_keywords}")
-        return backend_keywords
+        # return backend_keywords
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating title: {str(e)}")
 
@@ -259,7 +259,7 @@ async def generate_amazon_description():
         optimized_description = response.choices[0].message.content.strip()
         print("Generated Amazon Product Description")
         append_to_google_doc(DOCUMENT_ID, f"Amazon Product Description:\n{optimized_description}")
-        return optimized_description
+        # return optimized_description
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating title: {str(e)}")
 
