@@ -1,0 +1,3 @@
+# .gitignore
+google-credentials.json
+.env
