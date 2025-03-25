@@ -132,7 +132,7 @@ def get_product_summary(product_info):
 def get_top_matches(product_info, field_name, field_values):
     """Uses OpenAI to find the best matches for a given field from the product description."""
 
-    client = openai.OpenAI(api_key="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")
+    client = openai.OpenAI(api_key=api_key)
 
     ai_prompt = f"""
     # You are an AI model that matches structured product fields with valid values.
